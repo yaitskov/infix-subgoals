@@ -25,18 +25,19 @@
 
 (defun mypretty (x) (str::pretty x))
 
+(verify-guards mypretty)
+
 (defun me (x y)
-  ;(declare (xargs
-     ;       :guard (and (listp x) (natp y))
-            ; :verify-guards nil
-      ;      ))
   (nat-list-measure (list (sexp-depth x) (len x) y)))
 
-; (verify-guards me)
+(defconst *u* t)
 
 (mutual-recursion
  (defun infixargs (op args op-priority)
-   (declare (xargs :measure (me args 0)))
+   (declare (xargs
+             :guard (and (stringp op) (natp op-priority))
+             :verify-guards nil
+             :measure (me args 0)))
    (if (consp args)
        (if (consp (cdr args))
            (concatenate 'string
@@ -48,13 +49,18 @@
 
  (defun infixargs-wrap (sexp outer-priority op inner-priority)
    (declare (xargs
+             :guard (and (stringp op) (natp outer-priority) (natp inner-priority))
+             :verify-guards nil
              :measure (me sexp 7)))
    (wrap-par (infixargs op sexp inner-priority)
              outer-priority
              inner-priority))
 
  (defun infixfuncall (fargs)
-   (declare (xargs :measure (me fargs 8)))
+   (declare (xargs
+             ;; :guard (and (stringp op) (natp outer-priority) (natp inner-priority))
+             ;; :verify-guards nil
+             :measure (me fargs 8)))
    (if (consp fargs)
        (concatenate 'string
                     " "
@@ -63,7 +69,10 @@
        ""))
 
  (defun infix2 (sexp outer-priority)
-   (declare (xargs :measure (me sexp 9)))
+   (declare (xargs
+             :guard (natp outer-priority)
+             :verify-guards nil
+             :measure (me sexp 9)))
    (case-match sexp
        (('iff . a) (infixargs-wrap a outer-priority "↔" 10))
      (('implies . a) (infixargs-wrap a outer-priority "→" 20))
@@ -109,12 +118,12 @@
              99)
             (mypretty sexp))))))
 
+(verify-guards infix2)
 
-(defun infix (sexp)
-  ;; (declare (xargs :guard t :verify-guards nil))
-  (infix2 sexp 0))
+(defun infix (sexp) (infix2 sexp 0))
 
-; (verify-guards infix)
+(verify-guards infix)
+
 (defconst *sample* '(IMPLIES
                      (AND (CONSP L)
                       (< 0 (+ 1 (LEN (CDR L))))
