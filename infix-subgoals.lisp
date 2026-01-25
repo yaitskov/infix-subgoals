@@ -1,8 +1,3 @@
-; I haven't found an applicable code in ACL2 for doing infix translation and
-; I decided to make a simple function from scratch. After all I don't need to
-; translate everything - just implication and other basic logical operators
-; would make my day
-
 (in-package "ACL2")
 
 (include-book "std/strings/pretty" :dir :system)
@@ -29,8 +24,6 @@
 
 (defun me (x y)
   (nat-list-measure (list (sexp-depth x) (len x) y)))
-
-(defconst *u* t)
 
 (mutual-recursion
  (defun infixargs (op args op-priority)
@@ -124,19 +117,14 @@
 
 (verify-guards infix)
 
-(defconst *sample* '(IMPLIES
-                     (AND (CONSP L)
-                      (< 0 (+ 1 (LEN (CDR L))))
-                      (<= 0 X)
-                      (< X (+ 1 (LEN (CDR L))))
-                      (NOT (ZP X))
-                      (EQUAL (NTH (+ -1 X) (CDR L)) " "))
-                     (EQUAL (CAR L) " ")))
+(thm (stringp (infix
+              '(IMPLIES
+                (AND (CONSP L)
+                 (< 0 (+ 1 (LEN (CDR L))))
+                 (<= 0 X)
+                 (< X (+ 1 (LEN (CDR L))))
+                 (NOT (ZP X))
+                 (EQUAL (NTH (+ -1 X) (CDR L)) " "))
+                (EQUAL (CAR L) " ")))))
 
-
-;; defattach is commented due missing guard verification
-;; (defattach acl2::post-untranslate-hook infix)
-
-;; ACL2 Error in ( DEFATTACH POST-UNTRANSLATE-HOOK INFIX):  Attachments
-;; must be guard-verified function symbols (unless :SKIP-CHECKS T is specified
-;; with an active trust tag), but INFIX has not had its guard verified.
+(defattach acl2::post-untranslate-hook infix)
