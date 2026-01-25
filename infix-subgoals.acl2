@@ -1,0 +1,2 @@
+(include-book "std/portcullis" :dir :system)  ; include package std
+(certify-book "infix-subgoals" ? t :ttags :all)
