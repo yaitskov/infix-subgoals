@@ -36,7 +36,8 @@ notation with the same snippet written in infix notation (inspired by Haskell an
 ```
 
 ``` haskell
-CONSP L ∧ INTEGERP S ∧ 0 ≤ S ∧ INTEGERP X ∧ 0 ≤ X ∧ S < LEN L ∧ S ≤ X ∧ X < LEN L ∧ L[X] = " " → L[S] = " "
+CONSP L ∧ INTEGERP S ∧ 0 ≤ S ∧ INTEGERP X ∧ 0 ≤ X ∧ S < LEN L
+  ∧ S ≤ X ∧ X < LEN L ∧ L[X] = " " → L[S] = " "
 ```
 
 # Usage
