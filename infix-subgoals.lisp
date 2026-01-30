@@ -30,6 +30,9 @@
 (in-package "ACL2")
 
 (include-book "std/strings/pretty" :dir :system)
+(include-book "std/strings/coerce" :dir :system)
+(include-book "std/strings/strsubst" :dir :system)
+(include-book "std/strings/fast-cat" :dir :system)
 (include-book "std/basic/two-nats-measure" :dir :system)
 (include-book "tools/prettygoals/top" :dir :system :TTAGS :all)
 
@@ -47,9 +50,48 @@
       (concatenate 'string "(" v ")")
       v))
 
-(defun mypretty (x) (str::pretty x))
+(defun mypretty (x)
+  (if (stringp x)
+      (concatenate 'string "“" (str::strsubst "\"" "”" x) "“")
+      (str::pretty x)))
 
 (verify-guards mypretty)
+
+;; (defthm mypretty-string-starts-with-left-double-quote
+;;     (implies (stringp s)
+;;              (equal "“" (subseq (mypretty s) 0 3)))
+;;   :rule-classes nil)
+
+;; (defun foo (x)
+;;   (if (stringp x)
+;;       (str::fast-string-append x "+")
+;;       x))
+
+;; (defthm append
+;;     (implies (and (stringp a) (stringp b))
+;;              (equal (
+;; need a lemma for:
+;; (IMPLIES (STRINGP S)
+;;          (EQUAL "+"
+;;                 (IMPLODE (LIST (CAR (NTHCDR (LEN (EXPLODE S))
+;;                                             (APPEND (EXPLODE S) '(#\+))))))))
+
+;; (defthm foo-ends-with-pluss
+;;     (implies (stringp s)
+;;              (equal "+" (subseq (foo s)
+;;                                 (- (length (foo s)) 1)
+;;                                 (length (foo s)))))
+;;   :rule-classes nil
+;;   )
+
+
+;; (defthm mypretty-string-ends-with-right-double-quote
+;;     (implies (stringp s)
+;;              (equal "“" (subseq (mypretty s)
+;;                                 (- (length (mypretty s)) 3)
+;;                                 (length (mypretty s)))))
+;;   ; :rule-classes nil
+;;   )
 
 (defun me (x y)
   (nat-list-measure (list (sexp-depth x) (len x) y)))
@@ -64,7 +106,7 @@
        (if (consp (cdr args))
            (concatenate 'string
                         (infix2 (car args) op-priority)
-                        " " op " "
+                        op
                         (infixargs op (cdr args) op-priority))
            (infix2 (car args) op-priority))
        ""))
@@ -96,16 +138,22 @@
              :verify-guards nil
              :measure (me sexp 9)))
    (case-match sexp
-       (('iff . a) (infixargs-wrap a outer-priority "↔" 10))
-     (('implies . a) (infixargs-wrap a outer-priority "→" 20))
-     (('or . a) (infixargs-wrap a outer-priority "∨" 30))
-     (('and . a) (infixargs-wrap a outer-priority "∧" 40))
-     (('xor . a) (infixargs-wrap a outer-priority "⊕" 45))
-     (('equal . a) (infixargs-wrap a outer-priority "=" 50))
-     (('< . a) (infixargs-wrap a outer-priority "<" 51))
-     (('> . a) (infixargs-wrap a outer-priority ">" 51))
-     (('<= . a) (infixargs-wrap a outer-priority "≤" 51))
-     (('>= . a) (infixargs-wrap a outer-priority "≥" 51))
+       (('iff . a) (infixargs-wrap a outer-priority " ⟺ " 10))
+     (('implies . a) (infixargs-wrap a outer-priority " ⟹ " 20))
+     (('or . a) (infixargs-wrap a outer-priority " ∨ " 30))
+     (('and . a) (infixargs-wrap a outer-priority " ∧ " 40))
+     (('xor . a) (infixargs-wrap a outer-priority " ⊕ " 45))
+     (('equal . a) (infixargs-wrap a outer-priority " = " 50))
+     (('< . a) (infixargs-wrap a outer-priority " < " 51))
+     (('> . a) (infixargs-wrap a outer-priority " > " 51))
+     (('<= . a) (infixargs-wrap a outer-priority " ≤ " 51))
+     (('>= . a) (infixargs-wrap a outer-priority " ≥ " 51))
+     (('app . a) (infixargs-wrap a outer-priority " ◇ " 52))
+     (('list . a)
+      (concatenate 'string
+                   "[ "
+                   (infixargs-wrap a 0 ", " 52)
+                   " ]"))
      (('cons a b)
       (wrap-par (concatenate 'string
                              (infix2 a 55)
@@ -113,15 +161,30 @@
                              (infix2 b 55))
                 outer-priority
                 55))
-     (('+ . a) (infixargs-wrap a outer-priority "+" 61))
-     (('- . a) (infixargs-wrap a outer-priority "-" 61))
-     (('* . a) (infixargs-wrap a outer-priority "*" 71))
-     (('/ . a) (infixargs-wrap a outer-priority "÷" 71))
+     (('+ . a) (infixargs-wrap a outer-priority " + " 61))
+     (('- . a) (infixargs-wrap a outer-priority " - " 61))
+     (('* . a) (infixargs-wrap a outer-priority " * " 71))
+     (('/ . a) (infixargs-wrap a outer-priority " ÷ " 71))
+     (('consp a)
+      (wrap-par
+       (concatenate 'string
+                    (infix2 a 83)
+                    " :: _:_")
+       outer-priority
+       83))
+     (('true-listp a)
+      (wrap-par
+       (concatenate 'string
+                    (infix2 a 84)
+                    " :: [_]")
+       outer-priority
+       84))
      (('nth i l)
       (wrap-par
        (concatenate 'string
                     (infix2 l 85)
-                    "[" (infix2 i 0) "]" )
+                    " !! "
+                    (infix2 i 0))
        outer-priority
        85))
      (('not a)
@@ -155,5 +218,8 @@
                  (NOT (ZP X))
                  (EQUAL (NTH (+ -1 X) (CDR L)) " "))
                 (EQUAL (CAR L) " ")))))
+
+
+; (thm (equal "“abc”" (infix "abc")))
 
 (defattach acl2::post-untranslate-hook infix)
